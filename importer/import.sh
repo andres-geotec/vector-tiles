@@ -27,6 +27,7 @@ ogr2ogr \
   -nln "${PGSCHEMA}.${GDRIVE_SHAPE_NAME}" \
   -lco GEOMETRY_NAME=the_geom \
   -lco FID=id \
+  -lco PRECISION=NO \
   -nlt PROMOTE_TO_MULTI \
   -t_srs "EPSG:4326" \
   -overwrite
