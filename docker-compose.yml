@@ -1,0 +1,63 @@
+services:
+  db:
+    image: imresamu/postgis:17-3.5-alpine
+    container_name: postgis
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gis
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      # - ./pg_data:/var/lib/postgresql/data
+      - ./db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d gis"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  importer:
+    build: ./importer
+    container_name: shp_importer
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      GDRIVE_FOLDER_ID: "${GDRIVE_FOLDER_ID}"
+      GDRIVE_FOLDER_NAME: "${GDRIVE_FOLDER_NAME}"
+      GDRIVE_SHAPE_NAME: "${GDRIVE_SHAPE_NAME}"
+      PGHOST: "${PGHOST}"
+      PGPORT: "${PGPORT}"
+      PGDATABASE: "${PGDATABASE}"
+      PGSCHEMA: "${PGSCHEMA}"
+      PGUSER: "${PGUSER}"
+      PGPASSWORD: "${PGPASSWORD}"
+    restart: "no"
+  
+  martin:
+    image: ghcr.io/maplibre/martin:v0.18.1
+    container_name: martin
+    restart: unless-stopped
+    depends_on:
+      importer:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgres://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}
+    ports:
+      - "3000:3000"
+  
+  web:
+    build:
+      context: ./frontend
+      args:
+        REPO_URL: "${REPO_URL}"
+        REPO_REF: "main"
+        BUILD_DIR: "dist"
+    container_name: frontend
+    restart: unless-stopped
+    depends_on:
+      - martin
+    ports:
+      - "8080:80"
