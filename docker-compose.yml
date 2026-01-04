@@ -1,63 +1,73 @@
 services:
-  db:
+  postgis:
     image: imresamu/postgis:17-3.5-alpine
     container_name: postgis
     restart: unless-stopped
     environment:
-      POSTGRES_DB: gis
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: "${PG_DATABASE}"
+      POSTGRES_USER: "${PG_USER}"
+      POSTGRES_PASSWORD: "${PG_PASSWORD}"
     ports:
-      - "5433:5432"
+      - "${PG_PORT}:5432"
     volumes:
-      # - ./pg_data:/var/lib/postgresql/data
       - ./db-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d gis"]
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_DATABASE}"]
       interval: 5s
       timeout: 3s
       retries: 30
 
-  importer:
-    build: ./importer
-    container_name: shp_importer
+  geoserver:
+    # image: docker.osgeo.org/geoserver:2.24.2
+    image: kartoza/geoserver:2.28.0
+    container_name: geoserver
     depends_on:
-      db:
+      postgis:
         condition: service_healthy
+    ports:
+      - "8080:8080"
     environment:
-      GDRIVE_FOLDER_ID: "${GDRIVE_FOLDER_ID}"
-      GDRIVE_FOLDER_NAME: "${GDRIVE_FOLDER_NAME}"
-      GDRIVE_SHAPE_NAME: "${GDRIVE_SHAPE_NAME}"
-      PGHOST: "${PGHOST}"
-      PGPORT: "${PGPORT}"
-      PGDATABASE: "${PGDATABASE}"
-      PGSCHEMA: "${PGSCHEMA}"
-      PGUSER: "${PGUSER}"
-      PGPASSWORD: "${PGPASSWORD}"
-    restart: "no"
+      GEOSERVER_ADMIN_USER: "${GS_ADMIN_USER}"
+      GEOSERVER_ADMIN_PASSWORD: "${GS_ADMIN_PASSWORD}"
   
+  # importer:
+  #   build: ./importer
+  #   container_name: importer
+  #   depends_on:
+  #     postgis:
+  #       condition: service_healthy
+  #   environment:
+  #     PG_HOST: "${PG_HOST}"
+  #     PG_PORT: "${PG_PORT}"
+  #     PG_DATABASE: "${PG_DATABASE}"
+  #     PG_SCHEMA: "${PG_SCHEMA}"
+  #     PG_USER: "${PG_USER}"
+  #     PG_PASSWORD: "${PG_PASSWORD}"
+  #     PG_GEOMETRY_NAME: "${PG_GEOMETRY_NAME}"
+  #   restart: "no"
+
   martin:
     image: ghcr.io/maplibre/martin:v0.18.1
     container_name: martin
     restart: unless-stopped
     depends_on:
-      importer:
-        condition: service_completed_successfully
+      postgis:
+        condition: service_healthy
     environment:
-      DATABASE_URL: postgres://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}
+      DATABASE_URL: postgres://${PG_USER}:${PG_PASSWORD}@${PG_HOST}:${PG_PORT}/${PG_DATABASE}
     ports:
-      - "3000:3000"
-  
-  web:
-    build:
-      context: ./frontend
-      args:
-        REPO_URL: "${REPO_URL}"
-        REPO_REF: "main"
-        BUILD_DIR: "dist"
-    container_name: frontend
-    restart: unless-stopped
-    depends_on:
-      - martin
-    ports:
-      - "8080:80"
+      - "${MARTIN_PORT}:3000"
+
+  # web:
+  #   build:
+  #     context: ./frontend
+  #     args:
+  #       REPO_URL: "${REPO_URL}"
+  #       REPO_REF: "main"
+  #       BUILD_DIR: "dist"
+  #   container_name: frontend
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - martin
+  #   ports:
+  #     - "8081:80"

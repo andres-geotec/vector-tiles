@@ -14,7 +14,7 @@ gdown --folder $GDRIVE_FOLDER_ID
 echo '==> Descargado'
 
 SHP_PATH="${GDRIVE_FOLDER_NAME}/${GDRIVE_SHAPE_NAME}.shp"
-PG_DSN="host=${PGHOST} port=${PGPORT} dbname=${PGDATABASE} user=${PGUSER} password=${PGPASSWORD}"
+PG_DSN="host=${PG_HOST} port=${PG_PORT} dbname=${PG_DATABASE} user=${PG_USER} password=${PG_PASSWORD}"
 
 # Opciones:
 # -nln: nombre capa destino
@@ -24,7 +24,7 @@ PG_DSN="host=${PGHOST} port=${PGPORT} dbname=${PGDATABASE} user=${PGUSER} passwo
 ogr2ogr \
   -f "PostgreSQL" "PG:${PG_DSN}" \
   "${SHP_PATH}" \
-  -nln "${PGSCHEMA}.${GDRIVE_SHAPE_NAME}" \
+  -nln "${PG_SCHEMA}.${GDRIVE_SHAPE_NAME}" \
   -lco GEOMETRY_NAME=the_geom \
   -lco FID=id \
   -lco PRECISION=NO \
@@ -33,7 +33,7 @@ ogr2ogr \
   -overwrite
 
 echo "==> Listo. Verificando conteo..."
-psql "postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}" \
-  -c "SELECT COUNT(*) AS rows FROM ${PGSCHEMA}.${GDRIVE_SHAPE_NAME};"
+psql "postgresql://${PG_USER}:${PG_PASSWORD}@${PG_HOST}:${PG_PORT}/${PG_DATABASE}" \
+  -c "SELECT COUNT(*) AS rows FROM ${PG_SCHEMA}.${GDRIVE_SHAPE_NAME};"
 
 echo "==> Import terminado OK."
