@@ -29,22 +29,6 @@ services:
     environment:
       GEOSERVER_ADMIN_USER: "${GS_ADMIN_USER}"
       GEOSERVER_ADMIN_PASSWORD: "${GS_ADMIN_PASSWORD}"
-  
-  # importer:
-  #   build: ./importer
-  #   container_name: importer
-  #   depends_on:
-  #     postgis:
-  #       condition: service_healthy
-  #   environment:
-  #     PG_HOST: "${PG_HOST}"
-  #     PG_PORT: "${PG_PORT}"
-  #     PG_DATABASE: "${PG_DATABASE}"
-  #     PG_SCHEMA: "${PG_SCHEMA}"
-  #     PG_USER: "${PG_USER}"
-  #     PG_PASSWORD: "${PG_PASSWORD}"
-  #     PG_GEOMETRY_NAME: "${PG_GEOMETRY_NAME}"
-  #   restart: "no"
 
   martin:
     image: ghcr.io/maplibre/martin:v0.18.1
@@ -54,7 +38,7 @@ services:
       postgis:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://${PG_USER}:${PG_PASSWORD}@${PG_HOST}:${PG_PORT}/${PG_DATABASE}
+      DATABASE_URL: postgres://${PG_USER}:${PG_PASSWORD}@${PG_HOST}:5432/${PG_DATABASE}
     ports:
       - "${MARTIN_PORT}:3000"
 
